@@ -3,6 +3,9 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Loader2, Trophy, Zap, Target } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { ConfettiAnimation } from "@/components/ConfettiAnimation";
+import { StatCard } from "@/components/StatCard";
 
 export default function VickiDashboard() {
   const [, navigate] = useLocation();
@@ -41,13 +44,12 @@ export default function VickiDashboard() {
     completeTaskMutation.mutate(taskId);
   };
 
+  const [showConfetti, setShowConfetti] = useState(false);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
-          <p className="text-purple-700 font-semibold">Carregando suas missões...</p>
-        </div>
+        <LoadingSpinner size="lg" message="Carregando suas missões..." />
       </div>
     );
   }
@@ -77,37 +79,10 @@ export default function VickiDashboard() {
 
       {/* Stats Cards - Modern Design */}
       <div className="relative z-10 max-w-3xl mx-auto px-4 mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="group backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 hover:bg-white/60 transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg">
-          <div className="text-center">
-            <div className="text-4xl mb-2">⭐</div>
-            <p className="text-xs text-purple-700 font-bold uppercase tracking-wider">Pontos</p>
-            <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{data?.totalPoints || 0}</p>
-          </div>
-        </div>
-
-        <div className="group backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 hover:bg-white/60 transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg">
-          <div className="text-center">
-            <div className="text-4xl mb-2">🏆</div>
-            <p className="text-xs text-purple-700 font-bold uppercase tracking-wider">Medalhas</p>
-            <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{data?.unlockedMedals || 0}/{data?.totalMedals || 0}</p>
-          </div>
-        </div>
-
-        <div className="group backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 hover:bg-white/60 transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg">
-          <div className="text-center">
-            <div className="text-4xl mb-2">✅</div>
-            <p className="text-xs text-purple-700 font-bold uppercase tracking-wider">Completas</p>
-            <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{data?.completedTasks || 0}</p>
-          </div>
-        </div>
-
-        <div className="group backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 hover:bg-white/60 transition-all duration-300 hover:scale-105 cursor-pointer shadow-lg">
-          <div className="text-center">
-            <div className="text-4xl mb-2">🗺️</div>
-            <p className="text-xs text-purple-700 font-bold uppercase tracking-wider">Tesouro</p>
-            <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{Math.round(parseFloat(data?.treasureProgress || "0"))}%</p>
-          </div>
-        </div>
+        <StatCard icon="⭐" label="Pontos" value={data?.totalPoints || 0} gradient="purple" />
+        <StatCard icon="🏆" label="Medalhas" value={`${data?.unlockedMedals || 0}/${data?.totalMedals || 0}`} gradient="pink" />
+        <StatCard icon="✅" label="Completas" value={data?.completedTasks || 0} gradient="green" />
+        <StatCard icon="🗺️" label="Tesouro" value={`${Math.round(parseFloat(data?.treasureProgress || "0"))}%`} gradient="blue" />
       </div>
 
       {/* Treasure Progress - Enhanced */}
@@ -174,22 +149,25 @@ export default function VickiDashboard() {
                     </div>
                   </div>
                   {!task.completed && (
-                    <button
-                      onClick={() => handleCompleteTask(task.id)}
-                      disabled={completeTaskMutation.isPending}
-                      className="ml-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-black rounded-xl hover:from-purple-700 hover:to-pink-600 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-2"
-                    >
-                      {completeTaskMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          ✅ Fazer
-                        </>
-                      )}
-                    </button>
+                  <button
+                    onClick={() => {
+                      handleCompleteTask(task.id);
+                      setShowConfetti(true);
+                    }}
+                    disabled={completeTaskMutation.isPending}
+                    className="ml-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-black rounded-xl hover:from-purple-700 hover:to-pink-600 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-2"
+                  >
+                    {completeTaskMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        ✅ Fazer
+                      </>
+                    )}
+                  </button>
                   )}
                   {task.completed && (
                     <div className="text-4xl animate-bounce-in">✨</div>
@@ -235,6 +213,9 @@ export default function VickiDashboard() {
           👨‍👩‍👧 Painel dos Pais
         </button>
       </div>
+
+      {/* Confetti Animation */}
+      <ConfettiAnimation isActive={showConfetti} />
     </div>
   );
 }

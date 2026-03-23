@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -11,7 +11,7 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
@@ -84,9 +84,13 @@ export async function getUserByOpenId(openId: string) {
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get user:", error);
+    return undefined;
+  }
 }
 
 // ===== TASKS HELPERS =====
@@ -95,77 +99,147 @@ export async function getAllTasks() {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  try {
+    return await db.select().from(tasks).orderBy(tasks.createdAt);
+  } catch (error) {
+    console.error("[Database] Failed to get all tasks:", error);
+    return [];
+  }
 }
 
 export async function getTasksByCategory(category: "daily" | "weekly" | "monthly") {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(tasks).where(eq(tasks.category, category)).orderBy(desc(tasks.createdAt));
+  try {
+    return await db.select().from(tasks).where(eq(tasks.category, category)).orderBy(tasks.priority);
+  } catch (error) {
+    console.error("[Database] Failed to get tasks by category:", error);
+    return [];
+  }
 }
 
 export async function getTaskById(id: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
-  return result.length > 0 ? result[0] : null;
+  try {
+    const result = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get task by id:", error);
+    return null;
+  }
 }
 
-export async function createTask(task: any) {
+export async function createTask(data: {
+  title: string;
+  description?: string;
+  category: "daily" | "weekly" | "monthly";
+  points: number;
+  priority: "low" | "medium" | "high";
+  dueDate?: Date;
+}) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.insert(tasks).values(task);
-  return result;
+  try {
+    await db.insert(tasks).values({
+      title: data.title,
+      description: data.description || null,
+      category: data.category,
+      points: data.points,
+      priority: data.priority,
+      dueDate: data.dueDate || null,
+      completed: false,
+      completedAt: null,
+    });
+    
+    // Return the created task by fetching the latest
+    const allTasks = await getAllTasks();
+    return allTasks[allTasks.length - 1] || null;
+  } catch (error) {
+    console.error("[Database] Failed to create task:", error);
+    throw error;
+  }
 }
 
-export async function updateTask(id: number, updates: any) {
+export async function updateTask(id: number, data: Partial<{
+  title: string;
+  description: string;
+  category: "daily" | "weekly" | "monthly";
+  points: number;
+  priority: "low" | "medium" | "high";
+  dueDate: Date;
+}>) {
   const db = await getDb();
   if (!db) return null;
   
-  return await db.update(tasks).set(updates).where(eq(tasks.id, id));
+  try {
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.points !== undefined) updateData.points = data.points;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
+    
+    await db.update(tasks).set(updateData).where(eq(tasks.id, id));
+    return await getTaskById(id);
+  } catch (error) {
+    console.error("[Database] Failed to update task:", error);
+    throw error;
+  }
 }
 
 export async function deleteTask(id: number) {
   const db = await getDb();
   if (!db) return null;
   
-  return await db.delete(tasks).where(eq(tasks.id, id));
+  try {
+    return await db.delete(tasks).where(eq(tasks.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to delete task:", error);
+    throw error;
+  }
 }
 
 export async function completeTask(id: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const task = await getTaskById(id);
-  if (!task) return null;
+  try {
+    const task = await getTaskById(id);
+    if (!task) return null;
 
-  // Update task as completed
-  await db.update(tasks).set({ 
-    completed: true, 
-    completedAt: new Date() 
-  }).where(eq(tasks.id, id));
+    // Update task as completed
+    await db.update(tasks).set({ 
+      completed: true, 
+      completedAt: new Date() 
+    }).where(eq(tasks.id, id));
 
-  // Add to history
-  await db.insert(taskHistory).values({
-    taskId: id,
-    title: task.title,
-    pointsEarned: task.points,
-    category: task.category,
-  });
+    // Add to history
+    await db.insert(taskHistory).values({
+      taskId: id,
+      title: task.title,
+      pointsEarned: task.points,
+      category: task.category,
+    });
 
-  // Update points
-  await updatePoints(task.points, task.category);
+    // Update points
+    await updatePoints(task.points, task.category);
 
-  // Check for medal unlocks
-  await checkAndUnlockMedals();
+    // Check for medal unlocks
+    await checkAndUnlockMedals();
 
-  // Update treasure progress
-  await updateTreasureProgress(task.points);
+    // Update treasure progress
+    await updateTreasureProgress(task.points);
 
-  return task;
+    return task;
+  } catch (error) {
+    console.error("[Database] Failed to complete task:", error);
+    throw error;
+  }
 }
 
 // ===== POINTS HELPERS =====
@@ -174,43 +248,58 @@ export async function getPoints() {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.select().from(pointsSystem).limit(1);
-  return result.length > 0 ? result[0] : null;
+  try {
+    const result = await db.select().from(pointsSystem).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get points:", error);
+    return null;
+  }
 }
 
 export async function initializePoints() {
   const db = await getDb();
   if (!db) return null;
   
-  const existing = await getPoints();
-  if (existing) return existing;
+  try {
+    const existing = await getPoints();
+    if (existing) return existing;
 
-  const result = await db.insert(pointsSystem).values({
-    totalPoints: 0,
-    dailyPoints: 0,
-    weeklyPoints: 0,
-    monthlyPoints: 0,
-  });
+    const result = await db.insert(pointsSystem).values({
+      totalPoints: 0,
+      dailyPoints: 0,
+      weeklyPoints: 0,
+      monthlyPoints: 0,
+    });
 
-  return result;
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to initialize points:", error);
+    throw error;
+  }
 }
 
 export async function updatePoints(points: number, category: "daily" | "weekly" | "monthly") {
   const db = await getDb();
   if (!db) return null;
 
-  const current = await getPoints();
-  if (!current) {
-    await initializePoints();
+  try {
+    const current = await getPoints();
+    if (!current) {
+      await initializePoints();
+    }
+
+    const updates: any = { totalPoints: (current?.totalPoints || 0) + points };
+    
+    if (category === "daily") updates.dailyPoints = (current?.dailyPoints || 0) + points;
+    if (category === "weekly") updates.weeklyPoints = (current?.weeklyPoints || 0) + points;
+    if (category === "monthly") updates.monthlyPoints = (current?.monthlyPoints || 0) + points;
+
+    return await db.update(pointsSystem).set(updates).where(eq(pointsSystem.id, current?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update points:", error);
+    throw error;
   }
-
-  const updates: any = { totalPoints: (current?.totalPoints || 0) + points };
-  
-  if (category === "daily") updates.dailyPoints = (current?.dailyPoints || 0) + points;
-  if (category === "weekly") updates.weeklyPoints = (current?.weeklyPoints || 0) + points;
-  if (category === "monthly") updates.monthlyPoints = (current?.monthlyPoints || 0) + points;
-
-  return await db.update(pointsSystem).set(updates).where(eq(pointsSystem.id, current?.id || 1));
 }
 
 // ===== MEDALS HELPERS =====
@@ -219,107 +308,95 @@ export async function getAllMedals() {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(medals).orderBy(desc(medals.createdAt));
-}
-
-export async function getUnlockedMedals() {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return await db.select().from(medals).where(eq(medals.isUnlocked, true)).orderBy(desc(medals.unlockedAt));
-}
-
-export async function initializeMedals() {
-  const db = await getDb();
-  if (!db) return null;
-
-  const existing = await getAllMedals();
-  if (existing.length > 0) return existing;
-
-  const defaultMedals = [
-    {
-      name: "Primeiro Passo",
-      description: "Complete sua primeira tarefa",
-      icon: "🎯",
-      condition: "complete_1_task",
-    },
-    {
-      name: "Coletor de Ouro",
-      description: "Ganhe 50 pontos",
-      icon: "💰",
-      condition: "earn_50_points",
-    },
-    {
-      name: "Campeão",
-      description: "Ganhe 100 pontos",
-      icon: "🏆",
-      condition: "earn_100_points",
-    },
-    {
-      name: "Lenda",
-      description: "Ganhe 500 pontos",
-      icon: "⭐",
-      condition: "earn_500_points",
-    },
-    {
-      name: "Mestre das Tarefas",
-      description: "Complete 10 tarefas",
-      icon: "🎪",
-      condition: "complete_10_tasks",
-    },
-    {
-      name: "Semana Perfeita",
-      description: "Complete todas as tarefas semanais",
-      icon: "📅",
-      condition: "complete_all_weekly",
-    },
-  ];
-
-  for (const medal of defaultMedals) {
-    await db.insert(medals).values(medal);
+  try {
+    return await db.select().from(medals).orderBy(medals.createdAt);
+  } catch (error) {
+    console.error("[Database] Failed to get medals:", error);
+    return [];
   }
-
-  return defaultMedals;
 }
 
 export async function checkAndUnlockMedals() {
   const db = await getDb();
   if (!db) return;
 
-  const points = await getPoints();
-  const history = await getTaskHistory();
-  const unlockedMedals = await getUnlockedMedals();
+  try {
+    const points = await getPoints();
+    const history = await getTaskHistory();
+    
+    if (!points || !history) return;
 
-  const allMedals = await getAllMedals();
+    // Medal conditions
+    const conditions = [
+      { id: 1, name: "Primeiro Passo", check: () => history.length >= 1 },
+      { id: 2, name: "Dedicado", check: () => history.length >= 5 },
+      { id: 3, name: "Campeão", check: () => history.length >= 10 },
+      { id: 4, name: "Pontuação 100", check: () => points.totalPoints >= 100 },
+      { id: 5, name: "Pontuação 500", check: () => points.totalPoints >= 500 },
+      { id: 6, name: "Lendário", check: () => points.totalPoints >= 1000 },
+    ];
 
-  for (const medal of allMedals) {
-    if (medal.isUnlocked) continue;
+    for (const condition of conditions) {
+      if (condition.check()) {
+        const existing = await db.select().from(medalHistory)
+          .where(eq(medalHistory.medalId, condition.id))
+          .limit(1);
+        
+        if (existing.length === 0) {
+          await db.insert(medalHistory).values({
+            medalId: condition.id,
+            medalName: condition.name,
+            unlockedAt: new Date(),
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[Database] Failed to check and unlock medals:", error);
+  }
+}
 
-    let shouldUnlock = false;
+export async function initializeMedals() {
+  const db = await getDb();
+  if (!db) return null;
 
-    if (medal.condition === "complete_1_task" && history.length >= 1) {
-      shouldUnlock = true;
-    } else if (medal.condition === "complete_10_tasks" && history.length >= 10) {
-      shouldUnlock = true;
-    } else if (medal.condition === "earn_50_points" && (points?.totalPoints || 0) >= 50) {
-      shouldUnlock = true;
-    } else if (medal.condition === "earn_100_points" && (points?.totalPoints || 0) >= 100) {
-      shouldUnlock = true;
-    } else if (medal.condition === "earn_500_points" && (points?.totalPoints || 0) >= 500) {
-      shouldUnlock = true;
+  try {
+    const existing = await getAllMedals();
+    if (existing.length > 0) return existing;
+
+    const medalData = [
+      { name: "Primeiro Passo", description: "Complete sua primeira tarefa", icon: "🎯", condition: "complete_1_task" },
+      { name: "Dedicado", description: "Complete 5 tarefas", icon: "💪", condition: "complete_5_tasks" },
+      { name: "Campeão", description: "Complete 10 tarefas", icon: "🏆", condition: "complete_10_tasks" },
+      { name: "Pontuação 100", description: "Ganhe 100 pontos", icon: "⭐", condition: "earn_100_points" },
+      { name: "Pontuação 500", description: "Ganhe 500 pontos", icon: "✨", condition: "earn_500_points" },
+      { name: "Lendário", description: "Ganhe 1000 pontos", icon: "👑", condition: "earn_1000_points" },
+    ];
+
+    for (const medal of medalData) {
+      await db.insert(medals).values(medal);
     }
 
-    if (shouldUnlock) {
-      await db.update(medals).set({ 
-        isUnlocked: true, 
-        unlockedAt: new Date() 
-      }).where(eq(medals.id, medal.id));
+    return await getAllMedals();
+  } catch (error) {
+    console.error("[Database] Failed to initialize medals:", error);
+    throw error;
+  }
+}
 
-      await db.insert(medalHistory).values({
-        medalId: medal.id,
-        medalName: medal.name,
-      });
-    }
+export async function getUnlockedMedals() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const unlockedIds = await db.select({ medalId: medalHistory.medalId })
+      .from(medalHistory);
+    
+    const allMedals = await getAllMedals();
+    return allMedals.filter(m => unlockedIds.some(u => u.medalId === m.id));
+  } catch (error) {
+    console.error("[Database] Failed to get unlocked medals:", error);
+    return [];
   }
 }
 
@@ -328,15 +405,27 @@ export async function checkAndUnlockMedals() {
 export async function getTaskHistory() {
   const db = await getDb();
   if (!db) return [];
-  
-  return await db.select().from(taskHistory).orderBy(desc(taskHistory.completedAt));
+
+  try {
+    return await db.select().from(taskHistory).orderBy(taskHistory.completedAt);
+  } catch (error) {
+    console.error("[Database] Failed to get task history:", error);
+    return [];
+  }
 }
 
 export async function getTaskHistoryByCategory(category: "daily" | "weekly" | "monthly") {
   const db = await getDb();
   if (!db) return [];
-  
-  return await db.select().from(taskHistory).where(eq(taskHistory.category, category)).orderBy(desc(taskHistory.completedAt));
+
+  try {
+    return await db.select().from(taskHistory)
+      .where(eq(taskHistory.category, category))
+      .orderBy(taskHistory.completedAt);
+  } catch (error) {
+    console.error("[Database] Failed to get task history by category:", error);
+    return [];
+  }
 }
 
 // ===== TREASURE PROGRESS HELPERS =====
@@ -344,44 +433,61 @@ export async function getTaskHistoryByCategory(category: "daily" | "weekly" | "m
 export async function getTreasureProgress() {
   const db = await getDb();
   if (!db) return null;
-  
-  const result = await db.select().from(treasureProgress).limit(1);
-  return result.length > 0 ? result[0] : null;
+
+  try {
+    const result = await db.select().from(treasureProgress).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get treasure progress:", error);
+    return null;
+  }
 }
 
 export async function initializeTreasureProgress() {
   const db = await getDb();
   if (!db) return null;
 
-  const existing = await getTreasureProgress();
-  if (existing) return existing;
+  try {
+    const existing = await getTreasureProgress();
+    if (existing) return existing;
 
-  const result = await db.insert(treasureProgress).values({
-    currentStep: 0,
-    totalSteps: 100,
-    percentage: "0",
-  });
+    const result = await db.insert(treasureProgress).values({
+      currentStep: 0,
+      totalSteps: 100,
+      percentage: "0.00",
+    });
 
-  return result;
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to initialize treasure progress:", error);
+    throw error;
+  }
 }
 
 export async function updateTreasureProgress(points: number) {
   const db = await getDb();
   if (!db) return null;
 
-  const current = await getTreasureProgress();
-  if (!current) {
-    await initializeTreasureProgress();
+  try {
+    const current = await getTreasureProgress();
+    if (!current) {
+      await initializeTreasureProgress();
+    }
+
+    const currentPercentage = parseFloat(current?.percentage?.toString() || "0");
+    const newPercentage = Math.min(currentPercentage + (points / 1000) * 100, 100);
+    const newStep = Math.floor((newPercentage / 100) * 100);
+
+    return await db.update(treasureProgress)
+      .set({ 
+        percentage: newPercentage.toString(),
+        currentStep: newStep,
+      })
+      .where(eq(treasureProgress.id, current?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update treasure progress:", error);
+    throw error;
   }
-
-  const newStep = (current?.currentStep || 0) + Math.floor(points / 10);
-  const totalSteps = current?.totalSteps || 100;
-  const percentage = Math.min((newStep / totalSteps) * 100, 100);
-
-  return await db.update(treasureProgress).set({
-    currentStep: newStep,
-    percentage: percentage.toString(),
-  }).where(eq(treasureProgress.id, current?.id || 1));
 }
 
 // ===== PARENT SETTINGS HELPERS =====
@@ -390,45 +496,113 @@ export async function getParentSettings() {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.select().from(parentSettings).limit(1);
-  return result.length > 0 ? result[0] : null;
+  try {
+    const result = await db.select().from(parentSettings).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get parent settings:", error);
+    return null;
+  }
 }
 
 export async function initializeParentSettings() {
   const db = await getDb();
   if (!db) return null;
 
-  const existing = await getParentSettings();
-  if (existing) return existing;
+  try {
+    const existing = await getParentSettings();
+    if (existing) return existing;
 
-  const result = await db.insert(parentSettings).values({
-    parentPassword: "88441339",
-    isAuthenticated: false,
-  });
+    const result = await db.insert(parentSettings).values({
+      parentPassword: "88441339",
+      isAuthenticated: false,
+    });
 
-  return result;
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to initialize parent settings:", error);
+    throw error;
+  }
 }
 
 export async function verifyParentPassword(password: string) {
-  const settings = await getParentSettings();
-  if (!settings) {
-    await initializeParentSettings();
-    const newSettings = await getParentSettings();
-    return newSettings?.parentPassword === password;
+  try {
+    const settings = await getParentSettings();
+    if (!settings) {
+      await initializeParentSettings();
+      const newSettings = await getParentSettings();
+      return newSettings?.parentPassword === password;
+    }
+    return settings.parentPassword === password;
+  } catch (error) {
+    console.error("[Database] Failed to verify parent password:", error);
+    return false;
   }
-  return settings.parentPassword === password;
 }
 
 export async function updateParentPassword(newPassword: string) {
   const db = await getDb();
   if (!db) return null;
 
-  const settings = await getParentSettings();
-  if (!settings) {
-    await initializeParentSettings();
-  }
+  try {
+    const settings = await getParentSettings();
+    if (!settings) {
+      await initializeParentSettings();
+    }
 
-  return await db.update(parentSettings).set({
-    parentPassword: newPassword,
-  }).where(eq(parentSettings.id, settings?.id || 1));
+    return await db.update(parentSettings)
+      .set({ parentPassword: newPassword })
+      .where(eq(parentSettings.id, settings?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update parent password:", error);
+    throw error;
+  }
+}
+
+// ===== DASHBOARD STATS =====
+
+export async function getDashboardStats() {
+  try {
+    const points = await getPoints();
+    const history = await getTaskHistory();
+    const medals = await getUnlockedMedals();
+    const treasure = await getTreasureProgress();
+    const allTasks = await getAllTasks();
+
+    const completedTasks = allTasks.filter(t => t.completed).length;
+    const totalTasks = allTasks.length;
+
+    return {
+      totalPoints: points?.totalPoints || 0,
+      dailyPoints: points?.dailyPoints || 0,
+      weeklyPoints: points?.weeklyPoints || 0,
+      monthlyPoints: points?.monthlyPoints || 0,
+      completedTasks,
+      totalTasks,
+      unlockedMedals: medals.length,
+      totalMedals: 6,
+      treasureProgress: (treasure?.percentage ? parseFloat(treasure.percentage.toString()) : 0).toFixed(1),
+      medals: medals.map(m => ({
+        id: m.id,
+        name: m.name,
+        icon: m.icon,
+      })),
+      recentTasks: history.slice(-5).reverse(),
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get dashboard stats:", error);
+    return {
+      totalPoints: 0,
+      dailyPoints: 0,
+      weeklyPoints: 0,
+      monthlyPoints: 0,
+      completedTasks: 0,
+      totalTasks: 0,
+      unlockedMedals: 0,
+      totalMedals: 6,
+      treasureProgress: "0",
+      medals: [],
+      recentTasks: [],
+    };
+  }
 }

@@ -84,3 +84,42 @@
 - [x] Criar componentes com design 2026 (cards com gradientes, botões com efeitos)
 - [x] Melhorar feedback visual ao completar tarefas (confetti, celebração)
 - [x] Otimizar performance e remover estilos antigos
+
+
+## Correções e Melhorias - Fase 3
+
+### Bugs Críticos
+- [x] Verificar e corrigir erros de autenticação no painel dos pais
+- [x] Corrigir possíveis erros de refetch após ações
+- [x] Validar salvamento de tarefas no banco de dados
+- [x] Corrigir tratamento de erros em mutations
+- [x] Implementar retry logic para operações críticas
+
+### Melhorias de Funções
+- [x] Melhorar lógica de desbloqueio de medalhas (adicionar mais condições)
+- [ ] Implementar sistema de combo (tarefas consecutivas)
+- [ ] Adicionar sistema de bônus de pontos (multiplicadores)
+- [x] Melhorar cálculo do progresso do tesouro
+- [ ] Implementar reset diário/semanal/mensal de tarefas
+
+### Melhorias de Design
+- [x] Adicionar animação de confetti ao desbloquear medalhas
+- [x] Melhorar feedback visual de carregamento
+- [x] Adicionar mais efeitos visuais nas transições
+- [x] Otimizar cores para melhor contraste
+- [ ] Adicionar modo escuro completo
+- [x] Melhorar responsividade em tablets
+- [x] Adicionar ícones mais expressivos
+
+### Performance
+- [ ] Otimizar queries do banco de dados
+- [ ] Implementar cache de dados
+- [ ] Reduzir tamanho do bundle
+- [ ] Lazy load de componentes
+
+### UX/Usabilidade
+- [ ] Adicionar confirmação antes de deletar tarefas
+- [ ] Implementar undo para ações
+- [ ] Melhorar mensagens de erro
+- [ ] Adicionar onboarding para novos usuários
+- [ ] Implementar busca de tarefas
