@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MedalManager } from "@/components/MedalManager";
 import { VickiProfileManager } from "@/components/VickiProfileManager";
+import { RewardsManager } from "@/components/RewardsManager";
+import { ChallengesManager } from "@/components/ChallengesManager";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -91,58 +93,12 @@ export function AdminPanel() {
 
       {/* Challenges Tab */}
       {activeTab === "challenges" && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-black text-purple-700 uppercase">Gerenciar Desafios</h3>
-          <div className="grid gap-4">
-            {challenges?.map((challenge) => (
-              <Card key={challenge.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-purple-700">{challenge.icon} {challenge.title}</h4>
-                    <p className="text-sm text-purple-600">{challenge.description}</p>
-                    <p className="text-xs text-purple-500 mt-1">
-                      Progresso: {challenge.currentProgress}/{challenge.targetCount} | Bônus: {challenge.bonusMultiplier}x
-                    </p>
-                  </div>
-                  <Button
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold"
-                    onClick={() => toast.info("Deletar desafio - em desenvolvimento")}
-                  >
-                    Deletar
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
+        <ChallengesManager />
       )}
 
       {/* Rewards Tab */}
       {activeTab === "rewards" && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-black text-purple-700 uppercase">Gerenciar Recompensas</h3>
-          <div className="grid gap-4">
-            {rewards?.map((reward) => (
-              <Card key={reward.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-purple-700">{reward.icon} {reward.title}</h4>
-                    <p className="text-sm text-purple-600">{reward.description}</p>
-                    <p className="text-xs text-purple-500 mt-1">
-                      Categoria: {reward.category} | Custo: {reward.pointsCost} pontos
-                    </p>
-                  </div>
-                  <Button
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold"
-                    onClick={() => toast.info("Deletar recompensa - em desenvolvimento")}
-                  >
-                    Deletar
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
+        <RewardsManager />
       )}
 
       {/* Analytics Tab */}

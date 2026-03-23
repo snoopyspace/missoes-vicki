@@ -1374,3 +1374,111 @@ export async function updateVickiProfile(updates: any) {
     throw error;
   }
 }
+
+
+// ===== REWARDS MANAGEMENT HELPERS =====
+
+export async function createRewardFull(reward: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(rewards).values({
+      title: reward.title,
+      description: reward.description,
+      icon: reward.icon,
+      category: reward.category,
+      pointsCost: reward.pointsCost,
+      quantity: reward.quantity || 0,
+      isActive: true,
+      createdAt: new Date(),
+    });
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to create reward:", error);
+    throw error;
+  }
+}
+
+export async function updateRewardFull(rewardId: number, updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(rewards).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(eq(rewards.id, rewardId));
+  } catch (error) {
+    console.error("[Database] Failed to update reward:", error);
+    throw error;
+  }
+}
+
+export async function deleteRewardFull(rewardId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.delete(rewards).where(eq(rewards.id, rewardId));
+  } catch (error) {
+    console.error("[Database] Failed to delete reward:", error);
+    throw error;
+  }
+}
+
+// ===== CHALLENGES MANAGEMENT HELPERS =====
+
+export async function createChallengeFull(challenge: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const now = new Date();
+    const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    const result = await db.insert(weeklyChallenges).values({
+      title: challenge.title,
+      description: challenge.description,
+      icon: challenge.icon,
+      targetCount: challenge.targetCount,
+      currentProgress: 0,
+      bonusMultiplier: challenge.bonusMultiplier || "1.5",
+      weekStartDate: now,
+      weekEndDate: weekEnd,
+      isCompleted: false,
+      createdAt: new Date(),
+    });
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to create challenge:", error);
+    throw error;
+  }
+}
+
+export async function updateChallengeFull(challengeId: number, updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(weeklyChallenges).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(eq(weeklyChallenges.id, challengeId));
+  } catch (error) {
+    console.error("[Database] Failed to update challenge:", error);
+    throw error;
+  }
+}
+
+export async function deleteChallengeFull(challengeId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.delete(weeklyChallenges).where(eq(weeklyChallenges.id, challengeId));
+  } catch (error) {
+    console.error("[Database] Failed to delete challenge:", error);
+    throw error;
+  }
+}

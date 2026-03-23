@@ -466,6 +466,83 @@ export const appRouter = router({
         return await db.updateVickiProfile(input);
       }),
   }),
+
+  // ===== FULL MANAGEMENT ROUTERS =====
+  management: router({
+    // Full Reward Management
+    createRewardFull: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        category: z.string(),
+        pointsCost: z.number(),
+        quantity: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.createRewardFull(input);
+      }),
+
+    updateRewardFull: protectedProcedure
+      .input(z.object({
+        rewardId: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        icon: z.string().optional(),
+        category: z.string().optional(),
+        pointsCost: z.number().optional(),
+        quantity: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        const { rewardId, ...updates } = input;
+        return await db.updateRewardFull(rewardId, updates);
+      }),
+
+    deleteRewardFull: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.deleteRewardFull(input);
+      }),
+
+    // Full Challenge Management
+    createChallengeFull: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        targetCount: z.number(),
+        bonusMultiplier: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.createChallengeFull(input);
+      }),
+
+    updateChallengeFull: protectedProcedure
+      .input(z.object({
+        challengeId: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        icon: z.string().optional(),
+        targetCount: z.number().optional(),
+        bonusMultiplier: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        const { challengeId, ...updates } = input;
+        return await db.updateChallengeFull(challengeId, updates);
+      }),
+
+    deleteChallengeFull: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.deleteChallengeFull(input);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
