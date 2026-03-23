@@ -170,3 +170,63 @@ export const pushNotifications = mysqlTable("pushNotifications", {
 
 export type PushNotifications = typeof pushNotifications.$inferSelect;
 export type InsertPushNotifications = typeof pushNotifications.$inferInsert;
+
+
+/**
+ * Desafios Semanais
+ * Tarefas especiais com bônus de pontos e medalhas exclusivas
+ */
+export const weeklyChallenges = mysqlTable("weeklyChallenges", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 255 }).notNull(),
+  targetCount: int("targetCount").notNull(), // Quantas tarefas completar
+  bonusMultiplier: decimal("bonusMultiplier", { precision: 3, scale: 1 }).default("1.5").notNull(),
+  exclusiveMedalId: int("exclusiveMedalId"),
+  weekStartDate: timestamp("weekStartDate").notNull(),
+  weekEndDate: timestamp("weekEndDate").notNull(),
+  currentProgress: int("currentProgress").default(0).notNull(),
+  isCompleted: boolean("isCompleted").default(false),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WeeklyChallenge = typeof weeklyChallenges.$inferSelect;
+export type InsertWeeklyChallenge = typeof weeklyChallenges.$inferInsert;
+
+/**
+ * Recompensas (Loja de Resgates)
+ * Itens que podem ser resgatados com pontos
+ */
+export const rewards = mysqlTable("rewards", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(), // ex: "digital", "physical", "experience"
+  pointsCost: int("pointsCost").notNull(),
+  quantity: int("quantity").default(0), // 0 = unlimited
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = typeof rewards.$inferInsert;
+
+/**
+ * Histórico de Resgates
+ * Rastreia quando cada recompensa foi resgatada
+ */
+export const redeemHistory = mysqlTable("redeemHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  rewardId: int("rewardId").notNull(),
+  rewardTitle: varchar("rewardTitle", { length: 255 }).notNull(),
+  pointsSpent: int("pointsSpent").notNull(),
+  redeemedAt: timestamp("redeemedAt").defaultNow().notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "cancelled"]).default("pending"),
+  redeemCode: varchar("redeemCode", { length: 50 }),
+});
+
+export type RedeemHistory = typeof redeemHistory.$inferSelect;
+export type InsertRedeemHistory = typeof redeemHistory.$inferInsert;

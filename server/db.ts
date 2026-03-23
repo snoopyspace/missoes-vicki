@@ -1,6 +1,6 @@
 import { eq, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings, comboStreak, pushNotifications } from "../drizzle/schema";
+import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings, comboStreak, pushNotifications, weeklyChallenges, rewards, redeemHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -781,5 +781,466 @@ export async function updatePushNotificationTime(reminderTime: string) {
   } catch (error) {
     console.error("[Database] Failed to update push notification time:", error);
     throw error;
+  }
+}
+
+
+// ===== WEEKLY CHALLENGES HELPERS =====
+
+export async function getWeeklyChallenges() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    return await db.select().from(weeklyChallenges)
+      .where(and(
+        gte(weeklyChallenges.weekStartDate, weekStart),
+        lte(weeklyChallenges.weekEndDate, weekEnd)
+      ));
+  } catch (error) {
+    console.error("[Database] Failed to get weekly challenges:", error);
+    return [];
+  }
+}
+
+export async function initializeWeeklyChallenges() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // Check if challenges already exist for this week
+    const existing = await getWeeklyChallenges();
+    if (existing.length > 0) return existing;
+
+    // Create default challenges
+    const challenges = [
+      {
+        title: "Guerreiro da Semana",
+        description: "Complete 5 tarefas nesta semana",
+        icon: "⚔️",
+        targetCount: 5,
+        bonusMultiplier: "1.5",
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+      },
+      {
+        title: "Campeão Imparável",
+        description: "Complete 10 tarefas nesta semana",
+        icon: "🏆",
+        targetCount: 10,
+        bonusMultiplier: "2.0",
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+      },
+      {
+        title: "Lenda da Semana",
+        description: "Complete 20 tarefas nesta semana",
+        icon: "👑",
+        targetCount: 20,
+        bonusMultiplier: "3.0",
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+      },
+    ];
+
+    for (const challenge of challenges) {
+      await db.insert(weeklyChallenges).values(challenge);
+    }
+
+    return await getWeeklyChallenges();
+  } catch (error) {
+    console.error("[Database] Failed to initialize weekly challenges:", error);
+    throw error;
+  }
+}
+
+export async function updateWeeklyChallengeProgress(challengeId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const challenge = await db.select().from(weeklyChallenges)
+      .where(eq(weeklyChallenges.id, challengeId))
+      .limit(1);
+
+    if (challenge.length === 0) return null;
+
+    const current = challenge[0];
+    const newProgress = (current.currentProgress || 0) + 1;
+    const isCompleted = newProgress >= current.targetCount;
+
+    return await db.update(weeklyChallenges).set({
+      currentProgress: newProgress,
+      isCompleted: isCompleted,
+      completedAt: isCompleted ? new Date() : null,
+    }).where(eq(weeklyChallenges.id, challengeId));
+  } catch (error) {
+    console.error("[Database] Failed to update weekly challenge progress:", error);
+    throw error;
+  }
+}
+
+// ===== REWARDS HELPERS =====
+
+export async function getAllRewards() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select().from(rewards)
+      .where(eq(rewards.isActive, true))
+      .orderBy(rewards.pointsCost);
+  } catch (error) {
+    console.error("[Database] Failed to get all rewards:", error);
+    return [];
+  }
+}
+
+export async function getRewardsByCategory(category: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select().from(rewards)
+      .where(and(
+        eq(rewards.category, category),
+        eq(rewards.isActive, true)
+      ))
+      .orderBy(rewards.pointsCost);
+  } catch (error) {
+    console.error("[Database] Failed to get rewards by category:", error);
+    return [];
+  }
+}
+
+export async function initializeDefaultRewards() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const existing = await getAllRewards();
+    if (existing.length > 0) return existing;
+
+    const defaultRewards = [
+      {
+        title: "Dia Livre de Tarefas",
+        description: "Pule um dia sem fazer tarefas",
+        icon: "🎉",
+        category: "experience",
+        pointsCost: 100,
+        quantity: 0,
+      },
+      {
+        title: "Filme a Escolher",
+        description: "Escolha um filme para assistir",
+        icon: "🎬",
+        category: "experience",
+        pointsCost: 150,
+        quantity: 0,
+      },
+      {
+        title: "Sorvete Especial",
+        description: "Ganhe um sorvete especial",
+        icon: "🍦",
+        category: "physical",
+        pointsCost: 200,
+        quantity: 0,
+      },
+      {
+        title: "Jogo Novo",
+        description: "Escolha um jogo novo para jogar",
+        icon: "🎮",
+        category: "digital",
+        pointsCost: 300,
+        quantity: 0,
+      },
+      {
+        title: "Passeio Especial",
+        description: "Passeio ao local de sua escolha",
+        icon: "🎢",
+        category: "experience",
+        pointsCost: 500,
+        quantity: 0,
+      },
+    ];
+
+    for (const reward of defaultRewards) {
+      await db.insert(rewards).values(reward);
+    }
+
+    return await getAllRewards();
+  } catch (error) {
+    console.error("[Database] Failed to initialize default rewards:", error);
+    throw error;
+  }
+}
+
+export async function redeemReward(rewardId: number, pointsAvailable: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const rewardData = await db.select().from(rewards)
+      .where(eq(rewards.id, rewardId))
+      .limit(1);
+
+    if (rewardData.length === 0) {
+      throw new Error("Reward not found");
+    }
+
+    const reward = rewardData[0];
+
+    if (pointsAvailable < reward.pointsCost) {
+      throw new Error("Insufficient points");
+    }
+
+    // Generate redeem code
+    const redeemCode = `VICKI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // Create redeem history entry
+    const result = await db.insert(redeemHistory).values({
+      rewardId: rewardId,
+      rewardTitle: reward.title,
+      pointsSpent: reward.pointsCost,
+      status: "pending",
+      redeemCode: redeemCode,
+    });
+
+    // Deduct points
+    const points = await getPoints();
+    if (points) {
+      await db.update(pointsSystem).set({
+        totalPoints: Math.max(0, (points.totalPoints || 0) - reward.pointsCost),
+      }).where(eq(pointsSystem.id, points.id));
+    }
+
+    return {
+      success: true,
+      redeemCode: redeemCode,
+      reward: reward.title,
+      pointsSpent: reward.pointsCost,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to redeem reward:", error);
+    throw error;
+  }
+}
+
+export async function getRedeemHistory() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select().from(redeemHistory)
+      .orderBy(redeemHistory.redeemedAt);
+  } catch (error) {
+    console.error("[Database] Failed to get redeem history:", error);
+    return [];
+  }
+}
+
+
+// ===== ADMIN MANAGEMENT HELPERS =====
+
+export async function createReward(reward: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(rewards).values(reward);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to create reward:", error);
+    throw error;
+  }
+}
+
+export async function updateReward(rewardId: number, updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(rewards).set(updates).where(eq(rewards.id, rewardId));
+  } catch (error) {
+    console.error("[Database] Failed to update reward:", error);
+    throw error;
+  }
+}
+
+export async function deleteReward(rewardId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.delete(rewards).where(eq(rewards.id, rewardId));
+  } catch (error) {
+    console.error("[Database] Failed to delete reward:", error);
+    throw error;
+  }
+}
+
+export async function createWeeklyChallenge(challenge: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(weeklyChallenges).values(challenge);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to create weekly challenge:", error);
+    throw error;
+  }
+}
+
+export async function updateWeeklyChallenge(challengeId: number, updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(weeklyChallenges).set(updates).where(eq(weeklyChallenges.id, challengeId));
+  } catch (error) {
+    console.error("[Database] Failed to update weekly challenge:", error);
+    throw error;
+  }
+}
+
+export async function deleteWeeklyChallenge(challengeId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.delete(weeklyChallenges).where(eq(weeklyChallenges.id, challengeId));
+  } catch (error) {
+    console.error("[Database] Failed to delete weekly challenge:", error);
+    throw error;
+  }
+}
+
+export async function updateTaskPoints(taskId: number, newPoints: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(tasks).set({
+      points: newPoints,
+    }).where(eq(tasks.id, taskId));
+  } catch (error) {
+    console.error("[Database] Failed to update task points:", error);
+    throw error;
+  }
+}
+
+export async function toggleTaskActive(taskId: number, isActive: boolean) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(tasks).set({
+      completed: isActive,
+    }).where(eq(tasks.id, taskId));
+  } catch (error) {
+    console.error("[Database] Failed to toggle task active:", error);
+    throw error;
+  }
+}
+
+export async function resetUserProgress() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Reset points
+    const points = await getPoints();
+    if (points) {
+      await db.update(pointsSystem).set({
+        totalPoints: 0,
+        dailyPoints: 0,
+        weeklyPoints: 0,
+        monthlyPoints: 0,
+      }).where(eq(pointsSystem.id, points.id));
+    }
+
+    // Reset combo
+    const combo = await getComboStreak();
+    if (combo) {
+      await db.update(comboStreak).set({
+        currentStreak: 0,
+        multiplier: "1.0",
+      }).where(eq(comboStreak.id, combo.id));
+    }
+
+    // Reset treasure
+    const treasure = await getTreasureProgress();
+    if (treasure) {
+      await db.update(treasureProgress).set({
+        currentStep: 0,
+        percentage: "0",
+      }).where(eq(treasureProgress.id, treasure.id));
+    }
+
+    // Mark all tasks as incomplete
+    await db.update(tasks).set({
+      completed: false,
+      completedAt: null,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Database] Failed to reset user progress:", error);
+    throw error;
+  }
+}
+
+export async function getDetailedAnalytics() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const allTasks = await getAllTasks();
+    const history = await getTaskHistory();
+    const medals = await getUnlockedMedals();
+    const points = await getPoints();
+    const combo = await getComboStreak();
+
+    const completedTasks = allTasks.filter(t => t.completed).length;
+    const totalTasks = allTasks.length;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const dailyAverage = history.length > 0
+      ? Math.round(history.reduce((sum, h) => sum + (h.pointsEarned || 0), 0) / Math.max(1, history.length))
+      : 0;
+
+    return {
+      totalTasks,
+      completedTasks,
+      completionRate,
+      totalPoints: points?.totalPoints || 0,
+      dailyAverage,
+      unlockedMedals: medals.length,
+      currentCombo: combo?.currentStreak || 0,
+      maxCombo: combo?.maxStreak || 0,
+      totalTasksCompleted: history.length,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get detailed analytics:", error);
+    return null;
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { AdminPanel } from "@/components/AdminPanel";
 import { Loader2, Plus, Trash2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
@@ -371,6 +372,11 @@ export default function ParentDashboard() {
             <p className="text-xl font-black text-purple-900">Nenhuma tarefa completada ainda</p>
           </div>
         )}
+      </div>
+
+      {/* Admin Panel */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 mt-12 mb-8">
+        <AdminPanel />
       </div>
     </div>
   );

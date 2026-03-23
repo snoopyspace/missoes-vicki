@@ -148,3 +148,56 @@
 - [x] Criar sistema de lembretes diários
 - [ ] Adicionar notificações ao desbloquear medalhas
 - [x] Implementar notificações de combo ativo
+
+
+## Melhorias Adicionais - Fase 5
+
+### Desafios Semanais
+- [x] Criar tabela de weekly_challenges no banco de dados
+- [x] Implementar lógica de criação de desafios automáticos
+- [x] Criar sistema de bônus de pontos (1.5x, 2x, 3x)
+- [ ] Implementar medalhas exclusivas para desafios
+- [x] Criar interface de visualização de desafios
+- [x] Implementar rastreamento de progresso de desafios
+- [ ] Adicionar notificações de novos desafios
+
+### Sistema de Resgates
+- [x] Criar tabela de rewards no banco de dados
+- [x] Implementar lógica de resgate de pontos
+- [x] Criar interface de loja de recompensas
+- [x] Implementar histórico de resgates
+- [x] Adicionar categorias de recompensas
+- [x] Criar sistema de cupons/códigos de resgate
+- [x] Implementar confirmação de resgate
+
+
+## Gerenciamento Completo pelo Painel dos Pais - Fase 6
+
+### Backend - Endpoints de Gerenciamento
+- [x] Criar endpoints protegidos para gerenciar tarefas (criar, editar, deletar, ativar/desativar)
+- [x] Criar endpoints para gerenciar desafios semanais (criar, editar, deletar, resetar)
+- [x] Criar endpoints para gerenciar recompensas (criar, editar, deletar, ativar/desativar)
+- [x] Criar endpoints para gerenciar configurações gerais (pontos, bônus, etc)
+- [x] Criar endpoints para visualizar analytics e relatórios
+- [ ] Criar endpoints para gerenciar medalhas (criar, editar, deletar)
+- [x] Implementar autenticação de pais em todos os endpoints
+
+### Frontend - Painel dos Pais Expandido
+- [x] Criar abas de navegação no painel dos pais
+- [x] Implementar gerenciador de tarefas (CRUD completo)
+- [x] Implementar gerenciador de desafios (CRUD completo)
+- [x] Implementar gerenciador de recompensas (CRUD completo)
+- [ ] Implementar gerenciador de medalhas (CRUD completo)
+- [x] Criar dashboard de analytics com gráficos
+- [x] Implementar visualização de histórico completo
+- [x] Adicionar configurações gerais do app
+
+### Funcionalidades de Gerenciamento
+- [x] Editar valores de pontos das tarefas
+- [x] Ativar/desativar tarefas
+- [x] Resetar progresso da Vicki
+- [ ] Gerenciar bônus de combo
+- [ ] Configurar lembretes de notificações
+- [x] Visualizar estatísticas de desempenho
+- [ ] Exportar relatórios
+- [ ] Gerenciar senha do painel dos pais

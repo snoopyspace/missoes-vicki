@@ -256,6 +256,159 @@ export const appRouter = router({
         return await db.updatePushNotificationTime(input);
       }),
   }),
+
+  // ===== WEEKLY CHALLENGES ROUTERS =====
+  challenges: router({
+    getWeekly: publicProcedure.query(async () => {
+      let challenges = await db.getWeeklyChallenges();
+      if (challenges.length === 0) {
+        challenges = await db.initializeWeeklyChallenges() || [];
+      }
+      return challenges;
+    }),
+
+    updateProgress: publicProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        return await db.updateWeeklyChallengeProgress(input);
+      }),
+  }),
+
+  // ===== REWARDS ROUTERS =====
+  rewards: router({
+    getAll: publicProcedure.query(async () => {
+      let rewards = await db.getAllRewards();
+      if (rewards.length === 0) {
+        rewards = await db.initializeDefaultRewards() || [];
+      }
+      return rewards;
+    }),
+
+    getByCategory: publicProcedure
+      .input(z.string())
+      .query(async ({ input }) => {
+        return await db.getRewardsByCategory(input);
+      }),
+
+    redeem: publicProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const points = await db.getPoints();
+        if (!points) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Pontos não encontrados",
+          });
+        }
+        return await db.redeemReward(input, points.totalPoints || 0);
+      }),
+
+    getHistory: publicProcedure.query(async () => {
+      return await db.getRedeemHistory();
+    }),
+  }),
+
+  // ===== ADMIN MANAGEMENT ROUTERS =====
+  admin: router({
+    // Task Management
+    updateTaskPoints: protectedProcedure
+      .input(z.object({ taskId: z.number(), points: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.updateTaskPoints(input.taskId, input.points);
+      }),
+
+    toggleTaskActive: protectedProcedure
+      .input(z.object({ taskId: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.toggleTaskActive(input.taskId, input.isActive);
+      }),
+
+    // Reward Management
+    createReward: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        category: z.string(),
+        pointsCost: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.createReward(input);
+      }),
+
+    updateReward: protectedProcedure
+      .input(z.object({
+        rewardId: z.number(),
+        updates: z.any(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.updateReward(input.rewardId, input.updates);
+      }),
+
+    deleteReward: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.deleteReward(input);
+      }),
+
+    // Challenge Management
+    createChallenge: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        targetCount: z.number(),
+        bonusMultiplier: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return await db.createWeeklyChallenge({
+          ...input,
+          weekStartDate: weekStart,
+          weekEndDate: weekEnd,
+        });
+      }),
+
+    updateChallenge: protectedProcedure
+      .input(z.object({
+        challengeId: z.number(),
+        updates: z.any(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.updateWeeklyChallenge(input.challengeId, input.updates);
+      }),
+
+    deleteChallenge: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.deleteWeeklyChallenge(input);
+      }),
+
+    // User Management
+    resetProgress: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.resetUserProgress();
+      }),
+
+    getAnalytics: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.getDetailedAnalytics();
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
