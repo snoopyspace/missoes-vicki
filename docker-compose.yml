@@ -1,28 +1,28 @@
 version: '3.8'
 
 services:
-  # MySQL/TiDB Database
   db:
-    image: mysql:8.0
+    image: mysql:8.0-alpine
     container_name: missoes-vicki-db
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword123}
-      MYSQL_DATABASE: ${DB_NAME:-missoes_vicki}
-      MYSQL_USER: ${DB_USER:-vicki_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-vicki_password}
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: vicki
+      MYSQL_USER: vicki
+      MYSQL_PASSWORD: vicki123
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql
+      - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      timeout: 5s
+      retries: 5
       interval: 10s
+      start_period: 30s
     networks:
-      - missoes-vicki-network
+      - vicki-network
+    restart: unless-stopped
 
-  # Node.js Application
   app:
     build:
       context: .
@@ -33,35 +33,23 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-mysql://vicki_user:vicki_password@db:3306/missoes_vicki}
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-change-in-production}
-      VITE_APP_ID: ${VITE_APP_ID:-}
-      OAUTH_SERVER_URL: ${OAUTH_SERVER_URL:-}
-      VITE_OAUTH_PORTAL_URL: ${VITE_OAUTH_PORTAL_URL:-}
-      OWNER_OPEN_ID: ${OWNER_OPEN_ID:-}
-      OWNER_NAME: ${OWNER_NAME:-}
-      BUILT_IN_FORGE_API_URL: ${BUILT_IN_FORGE_API_URL:-}
-      BUILT_IN_FORGE_API_KEY: ${BUILT_IN_FORGE_API_KEY:-}
-      VITE_FRONTEND_FORGE_API_KEY: ${VITE_FRONTEND_FORGE_API_KEY:-}
-      VITE_FRONTEND_FORGE_API_URL: ${VITE_FRONTEND_FORGE_API_URL:-}
+      DATABASE_URL: mysql://vicki:vicki123@db:3306/vicki
+      JWT_SECRET: sua-chave-secreta-aqui-minimo-32-caracteres
+      VITE_APP_TITLE: Missões da Vicki
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "3000:3000"
     volumes:
-      - ./dist:/app/dist:ro
-      - ./drizzle:/app/drizzle:ro
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
-      timeout: 10s
-      retries: 5
-      interval: 30s
+      - app-data:/app/data
     networks:
-      - missoes-vicki-network
+      - vicki-network
     restart: unless-stopped
 
 volumes:
-  db_data:
+  app-data:
+    driver: local
+  db-data:
     driver: local
 
 networks:
-  missoes-vicki-network:
+  vicki-network:
     driver: bridge
