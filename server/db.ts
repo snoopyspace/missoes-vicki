@@ -1,6 +1,6 @@
 import { eq, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings, comboStreak, pushNotifications, weeklyChallenges, rewards, redeemHistory } from "../drizzle/schema";
+import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings, comboStreak, pushNotifications, weeklyChallenges, rewards, redeemHistory, vickiProfile } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1327,5 +1327,50 @@ export async function getMedalProgress() {
   } catch (error) {
     console.error("[Database] Failed to get medal progress:", error);
     return [];
+  }
+}
+
+
+// ===== VICKI PROFILE HELPERS =====
+
+export async function getVickiProfile() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const profile = await db.select().from(vickiProfile).limit(1);
+    if (profile.length === 0) {
+      // Initialize default profile
+      await db.insert(vickiProfile).values({
+        name: "Vicki",
+        avatar: "👧",
+        bio: "Adorei completar tarefas!",
+        favoriteColor: "#7c3aed",
+      });
+      return await db.select().from(vickiProfile).limit(1);
+    }
+    return profile[0];
+  } catch (error) {
+    console.error("[Database] Failed to get Vicki profile:", error);
+    return null;
+  }
+}
+
+export async function updateVickiProfile(updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const profile = await db.select().from(vickiProfile).limit(1);
+    if (profile.length === 0) {
+      return await db.insert(vickiProfile).values(updates);
+    }
+    return await db.update(vickiProfile).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(eq(vickiProfile.id, profile[0].id));
+  } catch (error) {
+    console.error("[Database] Failed to update Vicki profile:", error);
+    throw error;
   }
 }

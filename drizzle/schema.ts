@@ -230,3 +230,21 @@ export const redeemHistory = mysqlTable("redeemHistory", {
 
 export type RedeemHistory = typeof redeemHistory.$inferSelect;
 export type InsertRedeemHistory = typeof redeemHistory.$inferInsert;
+
+
+/**
+ * Perfil da Vicki
+ * Armazena informações pessoais da Vicki como nome e avatar
+ */
+export const vickiProfile = mysqlTable("vickiProfile", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).default("Vicki").notNull(),
+  avatar: varchar("avatar", { length: 255 }).default("👧").notNull(),
+  bio: text("bio"),
+  favoriteColor: varchar("favoriteColor", { length: 7 }).default("#7c3aed"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type VickiProfile = typeof vickiProfile.$inferSelect;
+export type InsertVickiProfile = typeof vickiProfile.$inferInsert;

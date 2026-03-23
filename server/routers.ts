@@ -447,6 +447,25 @@ export const appRouter = router({
         return await db.getDetailedAnalytics();
       }),
   }),
+
+  // ===== VICKI PROFILE ROUTERS =====
+  profile: router({
+    get: publicProcedure.query(async () => {
+      return await db.getVickiProfile();
+    }),
+
+    update: protectedProcedure
+      .input(z.object({
+        name: z.string().optional(),
+        avatar: z.string().optional(),
+        bio: z.string().optional(),
+        favoriteColor: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.updateVickiProfile(input);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

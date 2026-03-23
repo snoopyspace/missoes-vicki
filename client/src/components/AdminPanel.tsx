@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MedalManager } from "@/components/MedalManager";
+import { VickiProfileManager } from "@/components/VickiProfileManager";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -184,7 +185,10 @@ export function AdminPanel() {
 
       {/* Settings Tab */}
       {activeTab === "settings" && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          <VickiProfileManager />
+          
+          <div className="space-y-4">
           <h3 className="text-xl font-black text-purple-700 uppercase">⚙️ Configurações</h3>
           <Card className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
             <div className="space-y-4">
@@ -204,6 +208,7 @@ export function AdminPanel() {
               </p>
             </div>
           </Card>
+          </div>
         </div>
       )}
     </div>

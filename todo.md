@@ -227,3 +227,28 @@
 - [x] Visualizar quais medalhas a Vicki já desbloqueou
 - [x] Mostrar progresso para desbloquear medalhas
 - [ ] Adicionar notificações ao desbloquear medalhas customizadas
+
+
+## Correções e Melhorias - Fase 8
+
+### Bugs no Painel Admin
+- [x] Corrigir gerenciamento de recompensas (criar, editar, deletar)
+- [x] Corrigir gerenciamento de desafios (criar, editar, deletar)
+- [x] Adicionar validação de formulários
+- [x] Melhorar feedback visual de erros
+
+### Gerenciamento de Perfil da Vicki
+- [x] Adicionar campo para editar nome da Vicki
+- [x] Adicionar upload/seletor de avatar
+- [x] Salvar preferências no banco de dados
+- [x] Exibir nome e avatar no dashboard
+
+### Auditoria de Bugs
+- [x] Verificar autenticação em todos os endpoints
+- [x] Testar fluxo de tarefas completo
+- [x] Verificar cálculo de pontos e combos
+- [x] Testar sistema de medalhas
+- [x] Verificar resgates de recompensas
+- [x] Testar notificações push
+- [x] Verificar responsividade em mobile
+- [x] Testar performance do dashboard
