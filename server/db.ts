@@ -1244,3 +1244,88 @@ export async function getDetailedAnalytics() {
     return null;
   }
 }
+
+
+// ===== MEDAL MANAGEMENT HELPERS =====
+
+export async function createCustomMedal(medal: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(medals).values({
+      name: medal.name,
+      description: medal.description,
+      icon: medal.icon,
+      condition: medal.condition,
+      isUnlocked: false,
+      createdAt: new Date(),
+    });
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to create custom medal:", error);
+    throw error;
+  }
+}
+
+export async function updateCustomMedal(medalId: number, updates: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.update(medals).set(updates).where(eq(medals.id, medalId));
+  } catch (error) {
+    console.error("[Database] Failed to update custom medal:", error);
+    throw error;
+  }
+}
+
+export async function deleteCustomMedal(medalId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    return await db.delete(medals).where(eq(medals.id, medalId));
+  } catch (error) {
+    console.error("[Database] Failed to delete custom medal:", error);
+    throw error;
+  }
+}
+
+
+
+export async function getMedalProgress() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const allMedals = await db.select().from(medals);
+    const medalHistoryList = await db.select().from(medalHistory);
+    const stats = await getDetailedAnalytics();
+
+    return allMedals.map((medal) => {
+      const isUnlocked = medalHistoryList.some(m => m.medalId === medal.id);
+      let progress = 0;
+
+      if (medal.condition.includes("tasks")) {
+        const target = parseInt(medal.condition.match(/\d+/)?.[0] || "1");
+        progress = Math.min(100, ((stats?.totalTasksCompleted || 0) / target) * 100);
+      } else if (medal.condition.includes("points")) {
+        const target = parseInt(medal.condition.match(/\d+/)?.[0] || "1");
+        progress = Math.min(100, ((stats?.totalPoints || 0) / target) * 100);
+      } else if (medal.condition.includes("combo")) {
+        const target = parseInt(medal.condition.match(/\d+/)?.[0] || "1");
+        progress = Math.min(100, ((stats?.currentCombo || 0) / target) * 100);
+      }
+
+      return {
+        ...medal,
+        isUnlocked,
+        progress: Math.round(progress),
+      };
+    });
+  } catch (error) {
+    console.error("[Database] Failed to get medal progress:", error);
+    return [];
+  }
+}

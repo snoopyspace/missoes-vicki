@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MedalManager } from "@/components/MedalManager";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<"tasks" | "challenges" | "rewards" | "analytics" | "settings">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "challenges" | "rewards" | "medals" | "analytics" | "settings">("tasks");
   const { data: allTasks } = trpc.tasks.list.useQuery();
   const { data: challenges } = trpc.challenges.getWeekly.useQuery();
   const { data: rewards } = trpc.rewards.getAll.useQuery();
@@ -38,7 +39,7 @@ export function AdminPanel() {
     <div className="space-y-6">
       {/* Tab Navigation */}
       <div className="flex gap-2 flex-wrap border-b-2 border-purple-200 pb-4">
-        {(["tasks", "challenges", "rewards", "analytics", "settings"] as const).map((tab) => (
+        {(["tasks", "challenges", "rewards", "medals", "analytics", "settings"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -51,6 +52,7 @@ export function AdminPanel() {
             {tab === "tasks" && "📋 Tarefas"}
             {tab === "challenges" && "🎯 Desafios"}
             {tab === "rewards" && "🎁 Recompensas"}
+            {tab === "medals" && "🏅 Medalhas"}
             {tab === "analytics" && "📊 Analytics"}
             {tab === "settings" && "⚙️ Configurações"}
           </button>
@@ -173,6 +175,11 @@ export function AdminPanel() {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* Medals Tab */}
+      {activeTab === "medals" && (
+        <MedalManager />
       )}
 
       {/* Settings Tab */}

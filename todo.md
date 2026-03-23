@@ -201,3 +201,29 @@
 - [x] Visualizar estatísticas de desempenho
 - [ ] Exportar relatórios
 - [ ] Gerenciar senha do painel dos pais
+
+
+## Gerenciador de Medalhas Customizadas - Fase 7
+
+### Backend - Endpoints de Medalhas
+- [x] Criar endpoints para criar medalhas customizadas
+- [x] Criar endpoints para editar medalhas existentes
+- [x] Criar endpoints para deletar medalhas
+- [x] Implementar lógica de desbloqueio automático de medalhas
+- [x] Criar endpoints para visualizar todas as medalhas
+- [x] Adicionar validação de ícones e nomes
+
+### Frontend - Interface de Medalhas
+- [x] Criar aba de Medalhas no AdminPanel
+- [x] Implementar formulário de criação de medalhas
+- [x] Adicionar seletor de ícones/emojis
+- [x] Implementar edição de medalhas existentes
+- [x] Criar visualização de medalhas desbloqueadas
+- [x] Adicionar botão de deletar medalhas
+
+### Funcionalidades
+- [x] Permitir customizar nome, descrição e ícone da medalha
+- [x] Definir condições de desbloqueio (tarefas completas, pontos, combos)
+- [x] Visualizar quais medalhas a Vicki já desbloqueou
+- [x] Mostrar progresso para desbloquear medalhas
+- [ ] Adicionar notificações ao desbloquear medalhas customizadas

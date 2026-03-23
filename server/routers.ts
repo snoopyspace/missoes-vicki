@@ -116,6 +116,44 @@ export const appRouter = router({
     checkAndUnlock: publicProcedure.mutation(async () => {
       return await db.checkAndUnlockMedals();
     }),
+
+    getProgress: publicProcedure.query(async () => {
+      return await db.getMedalProgress();
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        condition: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.createCustomMedal(input);
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        medalId: z.number(),
+        updates: z.object({
+          name: z.string().optional(),
+          description: z.string().optional(),
+          icon: z.string().optional(),
+          condition: z.string().optional(),
+        }),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.updateCustomMedal(input.medalId, input.updates);
+      }),
+
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        return await db.deleteCustomMedal(input);
+      }),
   }),
 
   // ===== TASK HISTORY ROUTERS =====
