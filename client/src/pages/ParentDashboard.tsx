@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Plus, Edit2, Trash2, LogOut } from "lucide-react";
+import { Loader2, Plus, Trash2, LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ParentDashboard() {
   const [, navigate] = useLocation();
@@ -29,15 +30,10 @@ export default function ParentDashboard() {
   const tasksQuery = trpc.tasks.list.useQuery();
   const dashboardQuery = trpc.stats.getDashboard.useQuery();
   const historyQuery = trpc.history.list.useQuery();
-  const medalsQuery = trpc.medals.list.useQuery();
 
-  const createTaskMutation = trpc.tasks.create.useMutation();
-  const deleteTaskMutation = trpc.tasks.delete.useMutation();
-
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await createTaskMutation.mutateAsync(newTask);
+  const createTaskMutation = trpc.tasks.create.useMutation({
+    onSuccess: () => {
+      toast.success("✅ Tarefa criada com sucesso!");
       setNewTask({
         title: "",
         description: "",
@@ -48,20 +44,39 @@ export default function ParentDashboard() {
       setShowCreateForm(false);
       tasksQuery.refetch();
       dashboardQuery.refetch();
-    } catch (error) {
-      console.error("Erro ao criar tarefa:", error);
+    },
+    onError: (error) => {
+      toast.error("Erro ao criar tarefa", {
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteTaskMutation = trpc.tasks.delete.useMutation({
+    onSuccess: () => {
+      toast.success("🗑️ Tarefa deletada!");
+      tasksQuery.refetch();
+      dashboardQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error("Erro ao deletar tarefa", {
+        description: error.message,
+      });
+    },
+  });
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTask.title.trim()) {
+      toast.error("Título é obrigatório");
+      return;
     }
+    createTaskMutation.mutate(newTask);
   };
 
-  const handleDeleteTask = async (taskId: number) => {
+  const handleDeleteTask = (taskId: number) => {
     if (confirm("Tem certeza que deseja deletar esta tarefa?")) {
-      try {
-        await deleteTaskMutation.mutateAsync(taskId);
-        tasksQuery.refetch();
-        dashboardQuery.refetch();
-      } catch (error) {
-        console.error("Erro ao deletar tarefa:", error);
-      }
+      deleteTaskMutation.mutate(taskId);
     }
   };
 
@@ -72,28 +87,36 @@ export default function ParentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[rgb(255_250_245)] to-[rgb(254_215_170)] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-accent" />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+          <p className="text-purple-700 font-semibold">Carregando painel...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[rgb(255_250_245)] to-[rgb(254_215_170)] pb-20 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-10 left-10 w-20 h-20 memphis-circle bg-[rgb(167_243_208)] opacity-20 animate-float" />
-      <div className="absolute top-40 right-20 w-32 h-32 memphis-triangle bg-[rgb(221_214_254)] opacity-15 animate-float" style={{ animationDelay: "1s" }} />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 pb-20 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" />
+        <div className="absolute top-40 right-20 w-40 h-40 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: "2s" }} />
+        <div className="absolute bottom-20 left-1/3 w-36 h-36 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: "4s" }} />
+      </div>
 
       {/* Header */}
-      <div className="relative z-10 pt-6 px-4">
+      <div className="relative z-10 pt-8 px-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between mb-8">
           <div>
-            <h1 className="memphis-text text-4xl">👨‍👩‍👧 Painel dos Pais</h1>
-            <p className="text-gray-600 font-semibold">Gerenciar progresso da Vicki</p>
+            <h1 className="text-5xl font-black bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+              👨‍👩‍👧 Painel dos Pais
+            </h1>
+            <p className="text-lg text-purple-700 font-semibold mt-1">Gerenciar progresso da Vicki</p>
           </div>
           <button
             onClick={handleLogout}
-            className="btn-secondary flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-xl hover:from-red-600 hover:to-pink-600 active:scale-95 transition-all duration-200 shadow-lg flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             Sair
@@ -102,134 +125,138 @@ export default function ParentDashboard() {
       </div>
 
       {/* Stats Overview */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 mb-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="card-memphis bg-white">
-            <div className="text-center">
-              <div className="text-3xl mb-2">⭐</div>
-              <p className="text-xs text-gray-600 font-bold">PONTOS TOTAIS</p>
-              <p className="text-2xl font-bold text-accent">{dashboardQuery.data?.totalPoints || 0}</p>
-            </div>
+      <div className="relative z-10 max-w-4xl mx-auto px-4 mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all">
+          <div className="text-center">
+            <div className="text-4xl mb-2">⭐</div>
+            <p className="text-xs text-purple-700 font-bold uppercase">Pontos</p>
+            <p className="text-3xl font-black text-purple-600">{dashboardQuery.data?.totalPoints || 0}</p>
           </div>
+        </div>
 
-          <div className="card-memphis bg-white">
-            <div className="text-center">
-              <div className="text-3xl mb-2">🏆</div>
-              <p className="text-xs text-gray-600 font-bold">MEDALHAS</p>
-              <p className="text-2xl font-bold text-accent">{dashboardQuery.data?.unlockedMedals || 0}</p>
-            </div>
+        <div className="backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all">
+          <div className="text-center">
+            <div className="text-4xl mb-2">🏆</div>
+            <p className="text-xs text-purple-700 font-bold uppercase">Medalhas</p>
+            <p className="text-3xl font-black text-purple-600">{dashboardQuery.data?.unlockedMedals || 0}</p>
           </div>
+        </div>
 
-          <div className="card-memphis bg-white">
-            <div className="text-center">
-              <div className="text-3xl mb-2">✅</div>
-              <p className="text-xs text-gray-600 font-bold">TAREFAS FEITAS</p>
-              <p className="text-2xl font-bold text-accent">{dashboardQuery.data?.completedTasks || 0}</p>
-            </div>
+        <div className="backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all">
+          <div className="text-center">
+            <div className="text-4xl mb-2">✅</div>
+            <p className="text-xs text-purple-700 font-bold uppercase">Completas</p>
+            <p className="text-3xl font-black text-purple-600">{dashboardQuery.data?.completedTasks || 0}</p>
           </div>
+        </div>
 
-          <div className="card-memphis bg-white">
-            <div className="text-center">
-              <div className="text-3xl mb-2">🗺️</div>
-              <p className="text-xs text-gray-600 font-bold">TESOURO</p>
-              <p className="text-2xl font-bold text-accent">{Math.round(parseFloat(dashboardQuery.data?.treasureProgress || "0"))}%</p>
-            </div>
+        <div className="backdrop-blur-md bg-white/40 border border-white/60 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all">
+          <div className="text-center">
+            <div className="text-4xl mb-2">🗺️</div>
+            <p className="text-xs text-purple-700 font-bold uppercase">Tesouro</p>
+            <p className="text-3xl font-black text-purple-600">{Math.round(parseFloat(dashboardQuery.data?.treasureProgress || "0"))}%</p>
           </div>
         </div>
       </div>
 
-      {/* Create Task Section */}
+      {/* Create Task Button */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 mb-8">
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="btn-primary flex items-center gap-2 w-full md:w-auto"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-600 active:scale-95 transition-all duration-200 shadow-lg"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Nova Tarefa
         </button>
 
         {showCreateForm && (
-          <div className="card-memphis bg-white mt-4">
+          <div className="mt-6 backdrop-blur-md bg-white/40 border-2 border-white/60 rounded-2xl p-6 shadow-lg">
             <form onSubmit={handleCreateTask} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Título
+                <label className="block text-sm font-bold text-purple-900 mb-2">
+                  Título *
                 </label>
                 <input
                   type="text"
                   value={newTask.title}
                   onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-foreground rounded-lg font-bold"
+                  className="w-full px-4 py-3 bg-white/50 border-2 border-purple-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder="Ex: Fazer lição de casa"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-purple-900 mb-2">
                   Descrição
                 </label>
                 <textarea
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-foreground rounded-lg font-bold"
+                  className="w-full px-4 py-3 bg-white/50 border-2 border-purple-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  placeholder="Detalhes da tarefa..."
                   rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-purple-900 mb-2">
                     Categoria
                   </label>
                   <select
                     value={newTask.category}
                     onChange={(e) => setNewTask({ ...newTask, category: e.target.value as any })}
-                    className="w-full px-4 py-2 border-2 border-foreground rounded-lg font-bold"
+                    className="w-full px-4 py-3 bg-white/50 border-2 border-purple-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-600"
                   >
-                    <option value="daily">Diária</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="monthly">Mensal</option>
+                    <option value="daily">📅 Diária</option>
+                    <option value="weekly">📆 Semanal</option>
+                    <option value="monthly">📊 Mensal</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-purple-900 mb-2">
                     Prioridade
                   </label>
                   <select
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as any })}
-                    className="w-full px-4 py-2 border-2 border-foreground rounded-lg font-bold"
+                    className="w-full px-4 py-3 bg-white/50 border-2 border-purple-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-600"
                   >
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
+                    <option value="low">✨ Baixa</option>
+                    <option value="medium">⚡ Média</option>
+                    <option value="high">🔥 Alta</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-purple-900 mb-2">
                   Pontos
                 </label>
                 <input
                   type="number"
                   value={newTask.points}
                   onChange={(e) => setNewTask({ ...newTask, points: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border-2 border-foreground rounded-lg font-bold"
+                  className="w-full px-4 py-3 bg-white/50 border-2 border-purple-300 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-600"
                   min="1"
                   required
                 />
               </div>
 
               <div className="flex gap-2">
-                <button type="submit" className="btn-primary flex-1">
-                  ✅ Criar Tarefa
+                <button
+                  type="submit"
+                  disabled={createTaskMutation.isPending}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-600 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {createTaskMutation.isPending ? "Criando..." : "✅ Criar Tarefa"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="btn-secondary flex-1"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-xl hover:from-gray-500 hover:to-gray-600 active:scale-95 transition-all"
                 >
                   ❌ Cancelar
                 </button>
@@ -241,90 +268,107 @@ export default function ParentDashboard() {
 
       {/* Tasks List */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 mb-8">
-        <h2 className="memphis-text text-2xl mb-4">📋 Todas as Tarefas</h2>
+        <h2 className="text-3xl font-black text-purple-900 mb-5">📋 Todas as Tarefas</h2>
         {tasksQuery.data && tasksQuery.data.length > 0 ? (
           <div className="space-y-3">
             {tasksQuery.data.map((task) => (
-              <div key={task.id} className="task-item flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800">{task.title}</h3>
-                  {task.description && (
-                    <p className="text-sm text-gray-600">{task.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-bold">
-                      ⭐ {task.points} pts
-                    </span>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold">
-                      {task.category === "daily"
-                        ? "📅 Diária"
-                        : task.category === "weekly"
-                        ? "📆 Semanal"
-                        : "📊 Mensal"}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-bold ${
-                        task.priority === "high"
-                          ? "bg-red-100 text-red-800"
-                          : task.priority === "medium"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {task.priority === "high"
-                        ? "🔥 Alta"
-                        : task.priority === "medium"
-                        ? "⚡ Média"
-                        : "✨ Baixa"}
-                    </span>
-                    {task.completed && (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold">
-                        ✅ Completa
-                      </span>
+              <div
+                key={task.id}
+                className="backdrop-blur-md bg-white/40 border-2 border-white/60 rounded-2xl p-5 hover:bg-white/60 transition-all"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-black text-lg text-purple-900 mb-1">{task.title}</h3>
+                    {task.description && (
+                      <p className="text-sm text-purple-700 mb-3">{task.description}</p>
                     )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="badge-gradient bg-gradient-to-r from-yellow-300 to-yellow-200 text-yellow-900 border-yellow-400">
+                        ⭐ {task.points} pts
+                      </span>
+                      <span className="badge-gradient bg-gradient-to-r from-blue-300 to-blue-200 text-blue-900 border-blue-400">
+                        {task.category === "daily"
+                          ? "📅 Diária"
+                          : task.category === "weekly"
+                          ? "📆 Semanal"
+                          : "📊 Mensal"}
+                      </span>
+                      <span
+                        className={`badge-gradient ${
+                          task.priority === "high"
+                            ? "bg-gradient-to-r from-red-300 to-red-200 text-red-900 border-red-400"
+                            : task.priority === "medium"
+                            ? "bg-gradient-to-r from-orange-300 to-orange-200 text-orange-900 border-orange-400"
+                            : "bg-gradient-to-r from-green-300 to-green-200 text-green-900 border-green-400"
+                        }`}
+                      >
+                        {task.priority === "high"
+                          ? "🔥 Alta"
+                          : task.priority === "medium"
+                          ? "⚡ Média"
+                          : "✨ Baixa"}
+                      </span>
+                      {task.completed && (
+                        <span className="badge-gradient bg-gradient-to-r from-green-300 to-green-200 text-green-900 border-green-400">
+                          ✅ Completa
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    disabled={deleteTaskMutation.isPending}
+                    className="ml-4 p-3 hover:bg-red-100 rounded-xl transition-colors disabled:opacity-50"
+                    title="Deletar tarefa"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleDeleteTask(task.id)}
-                  className="ml-4 p-2 hover:bg-red-100 rounded-lg transition-colors"
-                  title="Deletar tarefa"
-                >
-                  <Trash2 className="w-4 h-4 text-red-600" />
-                </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="card-memphis bg-white text-center py-8">
-            <p className="text-gray-600 font-semibold">Nenhuma tarefa criada ainda</p>
+          <div className="backdrop-blur-md bg-white/40 border-2 border-white/60 rounded-2xl text-center py-12">
+            <p className="text-xl font-black text-purple-900">Nenhuma tarefa criada</p>
           </div>
         )}
       </div>
 
       {/* History Section */}
       <div className="relative z-10 max-w-4xl mx-auto px-4">
-        <h2 className="memphis-text text-2xl mb-4">📜 Histórico de Tarefas</h2>
+        <h2 className="text-3xl font-black text-purple-900 mb-5">📜 Histórico</h2>
         {historyQuery.data && historyQuery.data.length > 0 ? (
           <div className="space-y-2">
             {historyQuery.data.slice(0, 10).map((item) => (
-              <div key={item.id} className="card-memphis bg-white py-3">
+              <div
+                key={item.id}
+                className="backdrop-blur-md bg-white/40 border border-white/60 rounded-xl p-4 hover:bg-white/60 transition-all"
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-gray-800">{item.title}</p>
-                    <p className="text-xs text-gray-600">
-                      {new Date(item.completedAt).toLocaleDateString("pt-BR")}
+                    <p className="font-bold text-purple-900">{item.title}</p>
+                    <p className="text-xs text-purple-600">
+                      {new Date(item.completedAt).toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-accent">+{item.pointsEarned} pts</p>
+                    <p className="font-black text-lg bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+                      +{item.pointsEarned} pts
+                    </p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="card-memphis bg-white text-center py-8">
-            <p className="text-gray-600 font-semibold">Nenhuma tarefa completada ainda</p>
+          <div className="backdrop-blur-md bg-white/40 border-2 border-white/60 rounded-2xl text-center py-12">
+            <p className="text-xl font-black text-purple-900">Nenhuma tarefa completada ainda</p>
           </div>
         )}
       </div>

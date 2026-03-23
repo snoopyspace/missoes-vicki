@@ -2,77 +2,81 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ParentLogin() {
   const [, navigate] = useLocation();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const verifyPasswordMutation = trpc.parent.verifyPassword.useMutation();
+  const verifyPasswordMutation = trpc.parent.verifyPassword.useMutation({
+    onSuccess: () => {
+      sessionStorage.setItem("parentAuth", "true");
+      toast.success("✅ Bem-vindo ao painel!");
+      navigate("/pais/dashboard");
+    },
+    onError: (error) => {
+      toast.error("❌ Senha incorreta", {
+        description: "Verifique e tente novamente",
+      });
+      setPassword("");
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
-    try {
-      await verifyPasswordMutation.mutateAsync(password);
-      // Store auth token in session storage
-      sessionStorage.setItem("parentAuth", "true");
-      navigate("/pais/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Senha incorreta");
-      setPassword("");
-    } finally {
-      setIsLoading(false);
+    if (!password.trim()) {
+      toast.error("Digite a senha");
+      return;
     }
+    setIsLoading(true);
+    verifyPasswordMutation.mutate(password);
+    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[rgb(255_250_245)] to-[rgb(254_215_170)] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-10 left-10 w-20 h-20 memphis-circle bg-[rgb(167_243_208)] opacity-20 animate-float" />
-      <div className="absolute top-40 right-20 w-32 h-32 memphis-triangle bg-[rgb(221_214_254)] opacity-15 animate-float" style={{ animationDelay: "1s" }} />
-      <div className="absolute bottom-32 left-1/4 w-24 h-24 memphis-circle bg-[rgb(253_230_138)] opacity-20 animate-float" style={{ animationDelay: "2s" }} />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" />
+        <div className="absolute top-40 right-20 w-40 h-40 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: "2s" }} />
+        <div className="absolute bottom-20 left-1/3 w-36 h-36 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: "4s" }} />
+      </div>
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="card-memphis bg-white">
+        <div className="backdrop-blur-md bg-white/40 border-2 border-white/60 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <h1 className="memphis-text text-4xl mb-2">👨‍👩‍👧</h1>
-            <h2 className="memphis-text text-2xl">Painel dos Pais</h2>
-            <p className="text-gray-600 text-sm mt-2">Acesso restrito com senha</p>
+            <div className="text-6xl mb-4">👨‍👩‍👧</div>
+            <h2 className="text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-2">
+              Painel dos Pais
+            </h2>
+            <p className="text-purple-700 text-sm font-semibold">Acesso restrito com senha</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Senha de Acesso
+              <label className="block text-sm font-bold text-purple-900 mb-3">
+                🔐 Senha de Acesso
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite a senha"
-                className="w-full px-4 py-3 border-2 border-foreground rounded-lg font-bold focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full px-5 py-4 bg-white/50 border-2 border-purple-300 rounded-xl font-bold text-lg focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition-all"
                 disabled={isLoading}
+                autoFocus
               />
             </div>
-
-            {error && (
-              <div className="bg-red-100 border-2 border-red-500 text-red-800 px-4 py-3 rounded-lg font-bold text-sm">
-                ❌ {error}
-              </div>
-            )}
 
             <button
               type="submit"
               disabled={isLoading || !password}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-black text-lg rounded-xl hover:from-purple-700 hover:to-pink-600 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   Verificando...
                 </>
               ) : (
@@ -85,15 +89,15 @@ export default function ParentLogin() {
 
           <button
             onClick={() => navigate("/")}
-            className="btn-secondary w-full mt-4"
+            className="w-full mt-4 px-6 py-3 bg-white/40 backdrop-blur-md border-2 border-white/60 text-purple-900 font-bold rounded-xl hover:bg-white/60 active:scale-95 transition-all duration-200 shadow-lg"
           >
             ← Voltar
           </button>
-        </div>
 
-        <p className="text-center text-gray-600 text-xs mt-4">
-          Apenas para pais ou responsáveis
-        </p>
+          <p className="text-center text-purple-600 text-xs mt-6 font-semibold">
+            Apenas para pais ou responsáveis
+          </p>
+        </div>
       </div>
     </div>
   );
