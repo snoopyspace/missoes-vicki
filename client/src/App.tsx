@@ -4,6 +4,8 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { DarkModeProvider } from "./contexts/DarkModeContext";
+import { ComboDisplay } from "./components/ComboDisplay";
 import Home from "./pages/Home";
 import VickiDashboard from "./pages/VickiDashboard";
 import ParentLogin from "./pages/ParentLogin";
@@ -26,11 +28,17 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider
+        defaultTheme="light"
+        // switchable
+      >
+        <DarkModeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+            <ComboDisplay />
+          </TooltipProvider>
+        </DarkModeProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

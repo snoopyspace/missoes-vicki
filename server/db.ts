@@ -1,6 +1,6 @@
 import { eq, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings } from "../drizzle/schema";
+import { InsertUser, users, tasks, taskHistory, pointsSystem, medals, medalHistory, treasureProgress, parentSettings, comboStreak, pushNotifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -604,5 +604,182 @@ export async function getDashboardStats() {
       medals: [],
       recentTasks: [],
     };
+  }
+}
+
+
+// ===== COMBO STREAK HELPERS =====
+
+export async function getComboStreak() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select().from(comboStreak).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get combo streak:", error);
+    return null;
+  }
+}
+
+export async function initializeComboStreak() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const existing = await getComboStreak();
+    if (existing) return existing;
+
+    const result = await db.insert(comboStreak).values({
+      currentStreak: 0,
+      maxStreak: 0,
+      multiplier: "1.0",
+      lastTaskDate: null,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to initialize combo streak:", error);
+    throw error;
+  }
+}
+
+export async function updateComboStreak(taskCompleted: boolean) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    let current = await getComboStreak();
+    if (!current) {
+      await initializeComboStreak();
+      current = await getComboStreak();
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const lastDate = current?.lastTaskDate ? new Date(current.lastTaskDate) : null;
+    lastDate?.setHours(0, 0, 0, 0);
+
+    let newStreak = current?.currentStreak || 0;
+    let newMultiplier = 1.0;
+
+    if (taskCompleted) {
+      // Check if it's a new day
+      if (!lastDate || lastDate.getTime() < today.getTime()) {
+        newStreak = (current?.currentStreak || 0) + 1;
+      }
+
+      // Calculate multiplier based on streak
+      if (newStreak >= 10) newMultiplier = 5.0;
+      else if (newStreak >= 5) newMultiplier = 3.0;
+      else if (newStreak >= 2) newMultiplier = 2.0;
+      else newMultiplier = 1.0;
+    } else {
+      // Reset streak if task not completed
+      newStreak = 0;
+      newMultiplier = 1.0;
+    }
+
+    const maxStreak = Math.max(current?.maxStreak || 0, newStreak);
+
+    return await db.update(comboStreak).set({
+      currentStreak: newStreak,
+      maxStreak: maxStreak,
+      multiplier: newMultiplier.toString(),
+      lastTaskDate: new Date(),
+    }).where(eq(comboStreak.id, current?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update combo streak:", error);
+    throw error;
+  }
+}
+
+export async function getComboMultiplier() {
+  try {
+    const combo = await getComboStreak();
+    return combo ? parseFloat(combo.multiplier?.toString() || "1.0") : 1.0;
+  } catch (error) {
+    console.error("[Database] Failed to get combo multiplier:", error);
+    return 1.0;
+  }
+}
+
+// ===== PUSH NOTIFICATIONS HELPERS =====
+
+export async function getPushNotifications() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select().from(pushNotifications).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get push notifications:", error);
+    return null;
+  }
+}
+
+export async function initializePushNotifications() {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const existing = await getPushNotifications();
+    if (existing) return existing;
+
+    const result = await db.insert(pushNotifications).values({
+      isEnabled: true,
+      reminderTime: "09:00",
+      lastReminderSent: null,
+      subscriptionEndpoint: null,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to initialize push notifications:", error);
+    throw error;
+  }
+}
+
+export async function updatePushNotificationSubscription(endpoint: string, isEnabled: boolean) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    let current = await getPushNotifications();
+    if (!current) {
+      await initializePushNotifications();
+      current = await getPushNotifications();
+    }
+
+    return await db.update(pushNotifications).set({
+      subscriptionEndpoint: endpoint,
+      isEnabled: isEnabled,
+    }).where(eq(pushNotifications.id, current?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update push notification subscription:", error);
+    throw error;
+  }
+}
+
+export async function updatePushNotificationTime(reminderTime: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    let current = await getPushNotifications();
+    if (!current) {
+      await initializePushNotifications();
+      current = await getPushNotifications();
+    }
+
+    return await db.update(pushNotifications).set({
+      reminderTime: reminderTime,
+    }).where(eq(pushNotifications.id, current?.id || 1));
+  } catch (error) {
+    console.error("[Database] Failed to update push notification time:", error);
+    throw error;
   }
 }

@@ -123,3 +123,28 @@
 - [ ] Melhorar mensagens de erro
 - [ ] Adicionar onboarding para novos usuários
 - [ ] Implementar busca de tarefas
+
+
+## Melhorias Adicionais - Fase 4
+
+### Sistema de Combo
+- [x] Adicionar tabela de combo_streak no banco de dados
+- [x] Implementar lógica de rastreamento de tarefas consecutivas
+- [x] Criar multiplicadores de pontos (2x, 3x, 5x)
+- [x] Adicionar visualização de combo na interface
+- [x] Implementar reset de combo ao falhar uma tarefa
+- [ ] Adicionar medalha "Combo Master" ao atingir 10 tarefas seguidas
+
+### Modo Escuro
+- [x] Implementar toggle de tema escuro/claro
+- [x] Criar paleta de cores para dark mode
+- [ ] Atualizar todos os componentes para suportar dark mode
+- [x] Salvar preferência de tema no localStorage
+- [x] Adicionar transições suaves entre temas
+
+### Notificações Push
+- [x] Registrar service worker para push notifications
+- [x] Implementar permissão de notificações do navegador
+- [x] Criar sistema de lembretes diários
+- [ ] Adicionar notificações ao desbloquear medalhas
+- [x] Implementar notificações de combo ativo

@@ -213,6 +213,49 @@ export const appRouter = router({
       };
     }),
   }),
+
+  // ===== COMBO STREAK ROUTERS =====
+  combo: router({
+    getStreak: publicProcedure.query(async () => {
+      const combo = await db.getComboStreak();
+      if (!combo) {
+        await db.initializeComboStreak();
+        return await db.getComboStreak();
+      }
+      return combo;
+    }),
+
+    getMultiplier: publicProcedure.query(async () => {
+      return await db.getComboMultiplier();
+    }),
+  }),
+
+  // ===== PUSH NOTIFICATIONS ROUTERS =====
+  notifications: router({
+    getSettings: publicProcedure.query(async () => {
+      const settings = await db.getPushNotifications();
+      if (!settings) {
+        await db.initializePushNotifications();
+        return await db.getPushNotifications();
+      }
+      return settings;
+    }),
+
+    subscribe: publicProcedure
+      .input(z.object({
+        endpoint: z.string(),
+        isEnabled: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updatePushNotificationSubscription(input.endpoint, input.isEnabled);
+      }),
+
+    updateReminderTime: publicProcedure
+      .input(z.string())
+      .mutation(async ({ input }) => {
+        return await db.updatePushNotificationTime(input);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -138,3 +138,35 @@ export const parentSettings = mysqlTable("parentSettings", {
 
 export type ParentSettings = typeof parentSettings.$inferSelect;
 export type InsertParentSettings = typeof parentSettings.$inferInsert;
+
+/**
+ * Combo Streak - Rastreia sequências de tarefas completadas
+ * Armazena informações sobre combos ativos e multiplicadores
+ */
+export const comboStreak = mysqlTable("comboStreak", {
+  id: int("id").autoincrement().primaryKey(),
+  currentStreak: int("currentStreak").default(0).notNull(),
+  maxStreak: int("maxStreak").default(0).notNull(),
+  multiplier: decimal("multiplier", { precision: 3, scale: 1 }).default("1.0").notNull(),
+  lastTaskDate: timestamp("lastTaskDate"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ComboStreak = typeof comboStreak.$inferSelect;
+export type InsertComboStreak = typeof comboStreak.$inferInsert;
+
+/**
+ * Notificações Push
+ * Armazena configurações de notificações e lembretes
+ */
+export const pushNotifications = mysqlTable("pushNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  isEnabled: boolean("isEnabled").default(true).notNull(),
+  reminderTime: varchar("reminderTime", { length: 5 }).default("09:00").notNull(),
+  lastReminderSent: timestamp("lastReminderSent"),
+  subscriptionEndpoint: text("subscriptionEndpoint"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PushNotifications = typeof pushNotifications.$inferSelect;
+export type InsertPushNotifications = typeof pushNotifications.$inferInsert;

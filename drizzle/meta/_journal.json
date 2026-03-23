@@ -15,6 +15,13 @@
       "when": 1774255177014,
       "tag": "0001_brave_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774275056649,
+      "tag": "0002_fixed_exodus",
+      "breakpoints": true
     }
   ]
 }
