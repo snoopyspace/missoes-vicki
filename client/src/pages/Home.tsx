@@ -119,9 +119,6 @@ export default function Home() {
           <p className="text-purple-700 font-semibold">
             Desenvolvido com ❤️ para motivar crianças a completar suas tarefas
           </p>
-          <p className="text-purple-600 text-sm mt-2">
-            
-          </p>
         </div>
       </div>
     </div>
