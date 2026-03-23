@@ -120,7 +120,7 @@ export default function Home() {
             Desenvolvido com ❤️ para motivar crianças a completar suas tarefas
           </p>
           <p className="text-purple-600 text-sm mt-2">
-            Versão 2.0 - Design Moderno 2026
+            
           </p>
         </div>
       </div>

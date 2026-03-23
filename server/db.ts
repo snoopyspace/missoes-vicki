@@ -531,9 +531,13 @@ export async function verifyParentPassword(password: string) {
     if (!settings) {
       await initializeParentSettings();
       const newSettings = await getParentSettings();
-      return newSettings?.parentPassword === password;
+      const isValid = newSettings?.parentPassword === password;
+      console.log("[Auth] Password verification (new):", { input: password, stored: newSettings?.parentPassword, isValid });
+      return isValid;
     }
-    return settings.parentPassword === password;
+    const isValid = settings.parentPassword === password;
+    console.log("[Auth] Password verification:", { input: password, stored: settings.parentPassword, isValid });
+    return isValid;
   } catch (error) {
     console.error("[Database] Failed to verify parent password:", error);
     return false;
